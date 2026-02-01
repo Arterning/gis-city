@@ -10,6 +10,9 @@
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin=""/>
 
+    <!-- Leaflet.Draw CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
@@ -31,8 +34,41 @@
                 <span>Point</span>
             </div>
             <div class="legend-item">
+                <span class="legend-icon line"></span>
+                <span>Line</span>
+            </div>
+            <div class="legend-item">
                 <span class="legend-icon polygon"></span>
-                <span>Polygon/MultiPolygon</span>
+                <span>Polygon</span>
+            </div>
+        </div>
+
+        <!-- POI Creation Modal -->
+        <div id="poi-modal" class="modal">
+            <div class="modal-content">
+                <h2>Create New POI</h2>
+                <form id="poi-form">
+                    <div class="form-group">
+                        <label for="poi-name">Name *</label>
+                        <input type="text" id="poi-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="poi-type">Type</label>
+                        <input type="text" id="poi-type" placeholder="e.g., restaurant, park, district">
+                    </div>
+                    <div class="form-group">
+                        <label for="poi-address">Address</label>
+                        <input type="text" id="poi-address">
+                    </div>
+                    <div class="form-group">
+                        <label for="poi-properties">Properties (JSON)</label>
+                        <textarea id="poi-properties" rows="4" placeholder='{"key": "value"}'></textarea>
+                    </div>
+                    <div class="form-buttons">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -41,6 +77,9 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
+
+    <!-- Leaflet.Draw JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/map.js') }}"></script>
