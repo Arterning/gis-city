@@ -46,7 +46,7 @@ def find_containing_poi(latitude: float, longitude: float):
         longitude: Longitude (WGS84)
 
     Returns:
-        POI object or None if not found
+        dict: POI info with distance=0, or None if not found
     """
     db = SessionLocal()
     try:
@@ -72,12 +72,72 @@ def find_containing_poi(latitude: float, longitude: float):
                 "name": result.name,
                 "poi_type": result.poi_type,
                 "address": result.address,
-                "properties": result.properties
+                "properties": result.properties,
+                "distance": 0.0,
+                "contained": True
             }
         return None
 
     finally:
         db.close()
+
+
+def find_nearest_poi(latitude: float, longitude: float):
+    """
+    Find the nearest POI to the given point.
+
+    Args:
+        latitude: Latitude (WGS84)
+        longitude: Longitude (WGS84)
+
+    Returns:
+        dict: POI info with distance in meters, or None if no POI found
+    """
+    db = SessionLocal()
+    try:
+        # Create point geometry in WKT format
+        point_wkt = f"POINT({longitude} {latitude})"
+
+        # Query using ST_Distance to find nearest POI
+        # ST_Distance returns distance in degrees, use geography cast for meters
+        # Or use ST_Distance_Sphere for approximate distance in meters
+        query = text("""
+            SELECT id, name, poi_type, address,
+                   ST_AsText(geom) as geom_text,
+                   properties,
+                   ST_Distance(
+                       geom::geography,
+                       ST_GeomFromText(:point, 4326)::geography
+                   ) as distance
+            FROM poi
+            ORDER BY geom::geography <-> ST_GeomFromText(:point, 4326)::geography
+            LIMIT 1
+        """)
+
+        result = db.execute(query, {"point": point_wkt}).fetchone()
+
+        if result:
+            return {
+                "id": result.id,
+                "name": result.name,
+                "poi_type": result.poi_type,
+                "address": result.address,
+                "properties": result.properties,
+                "distance": result.distance,  # in meters
+                "contained": False
+            }
+        return None
+
+    finally:
+        db.close()
+
+
+def format_distance(distance_meters: float) -> str:
+    """Format distance for display."""
+    if distance_meters < 1000:
+        return f"{distance_meters:.2f} meters"
+    else:
+        return f"{distance_meters / 1000:.2f} kilometers"
 
 
 def main():
@@ -94,11 +154,12 @@ def main():
     print(f"Current location: {lat}, {lon}")
     print()
 
+    # First, try to find POI that contains the point
     print("Searching for containing POI...")
     poi = find_containing_poi(lat, lon)
 
     if poi:
-        print("Found POI:")
+        print("✓ Found containing POI:")
         print(f"  Name: {poi['name']}")
         if poi['poi_type']:
             print(f"  Type: {poi['poi_type']}")
@@ -106,9 +167,24 @@ def main():
             print(f"  Address: {poi['address']}")
         if poi['properties']:
             print(f"  Properties: {poi['properties']}")
+        print(f"  Status: Inside this area")
     else:
-        print("No POI found containing this location.")
-        print("The point may be outside all POI boundaries.")
+        # If not contained in any POI, find the nearest one
+        print("Not inside any POI. Searching for nearest POI...")
+        poi = find_nearest_poi(lat, lon)
+
+        if poi:
+            print("✓ Found nearest POI:")
+            print(f"  Name: {poi['name']}")
+            if poi['poi_type']:
+                print(f"  Type: {poi['poi_type']}")
+            if poi['address']:
+                print(f"  Address: {poi['address']}")
+            if poi['properties']:
+                print(f"  Properties: {poi['properties']}")
+            print(f"  Distance: {format_distance(poi['distance'])}")
+        else:
+            print("No POI found in database.")
 
 
 if __name__ == "__main__":
